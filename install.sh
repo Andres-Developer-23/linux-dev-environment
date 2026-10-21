@@ -220,11 +220,15 @@ install_zsh_plugins() {
         warn "$name: tiene cambios locales; no actualizo"
         continue
       fi
-      if run git -C "$dir" pull --ff-only --quiet; then
+      if ((DRY)); then
+        printf '  %s[dry-run]%s actualizar %s\n' "$C_DIM" "$C_OFF" "$name"
+      elif run git -C "$dir" pull --ff-only --quiet; then
         ok "$name actualizado"
       fi
     else
-      if run git clone --depth 1 --quiet "https://github.com/$repo.git" "$dir"; then
+      if ((DRY)); then
+        printf '  %s[dry-run]%s clonar %s\n' "$C_DIM" "$C_OFF" "$name"
+      elif run git clone --depth 1 --quiet "https://github.com/$repo.git" "$dir"; then
         ok "$name instalado"
       fi
     fi

@@ -1,0 +1,28 @@
+# Artefactos de ejecución: se regeneran en cada instalación
+backups/
+logs/
+
+# Nunca versionar secretos ni configuración local
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.keystore
+id_rsa
+id_ed25519
+.netrc
+.git-credentials
+auth.json
+credentials.json
+secrets.toml
+
+# Backups de dotfiles que genera el script
+*.bak
+
+# Editores y SO
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

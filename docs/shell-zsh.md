@@ -508,3 +508,6 @@ zle-line-init
 ```
 
 Para depurar el arranque, `zsh -x ~/.zshrc` muestra cada comando que se ejecuta.
+
+Para la referencia de las herramientas que usa esta configuración, mira
+[comandos.md](comandos.md).

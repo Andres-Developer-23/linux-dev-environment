@@ -164,6 +164,13 @@ correcto, rojo si falló.
 | `Alt+.` | insertar el último argumento del comando anterior |
 | `Mayús+Tab` | completado clásico, sin fzf |
 
+### Manual de comandos
+
+La referencia completa de las herramientas instaladas —rg, fd, eza, bat, zoxide, fzf,
+delta, lazygit, gh, just, yq, uv, ruff, bun— está en
+**[docs/comandos.md](docs/comandos.md)**, con una chuleta rápida de las treinta órdenes
+más usadas al principio.
+
 ### Aliases
 
 ```bash
@@ -226,11 +233,12 @@ dev-setup/
 ├── .gitignore
 ├── README.md
 └── docs/
-    ├── architecture.md     # cómo funciona install.sh por dentro
-    ├── shell-zsh.md        # la configuración de zsh en detalle
-    ├── prompt-starship.md  # el prompt módulo a módulo
-    ├── troubleshooting.md  # problemas frecuentes
-    └── android-flutter.md  # SDK de Android y Flutter
+    ├── comandos.md           # manual de comandos de todas las herramientas
+    ├── architecture.md       # cómo funciona install.sh por dentro
+    ├── shell-zsh.md          # la configuración de zsh en detalle
+    ├── prompt-starship.md    # el prompt módulo a módulo
+    ├── troubleshooting.md    # problemas frecuentes
+    └── android-flutter.md    # SDK de Android y Flutter
 ```
 
 `backups/` y `logs/` se crean al ejecutar y están fuera del control de versiones.
@@ -243,6 +251,7 @@ Detalle completo en [docs/architecture.md](docs/architecture.md).
 
 | Documento | Contenido |
 |---|---|
+| [comandos.md](docs/comandos.md) | **Manual de comandos**: chuleta rápida y referencia de cada herramienta |
 | [architecture.md](docs/architecture.md) | Capas, idempotencia, bloques gestionados, backups, cómo añadir una capa |
 | [shell-zsh.md](docs/shell-zsh.md) | `.zshenv` / `.zprofile` / `.zshrc`, historial, completado, plugins, fzf, alias |
 | [prompt-starship.md](docs/prompt-starship.md) | Cada módulo del prompt, cómo cambiar colores, iconos y qué mostrar |

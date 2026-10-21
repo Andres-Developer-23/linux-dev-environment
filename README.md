@@ -129,11 +129,20 @@ sin tocar nada.
 
 ### Prompt
 
-Tema *Tokyo Night*. Muestra, en este orden:
+Tema *Tokyo Night*, compacto e informativo. En un repositorio git con Python y Node:
 
 ```
-andres-Lenovo-V14  ~/proyectos/api  on  main  182dc98 !  via  py v3.12.3  via  node.js v24.22.0  opencode  12%  22:45  ❯
+…/api │  main │  9233af2 │ ! │  v3.12.3 │  v24.22.0 │  14:30 ❯
 ```
+
+En tu carpeta personal:
+
+```
+~ │  v3.12.3 │ opencode │  14:30 ❯
+```
+
+Los segmentos van separados por una línea vertical tenue, y cada uno lleva su icono de
+Nerd Font.
 
 - **directorio** — truncado a 3 niveles, con `…/` cuando recorta
 - **rama de git** + **hash corto** + **estado** (`!` modificado, `?` sin seguimiento, `≡` stashed)
@@ -141,10 +150,13 @@ andres-Lenovo-V14  ~/proyectos/api  on  main  182dc98 !  via  py v3.12.3  via  n
 - **contexto de Docker, AWS y GCP** — solo si están activos
 - **opencode** — marca cuando estás dentro de una sesión de opencode
 - **duración** — solo si el comando tardó más de 2 s
-- **código de salida** — en rojo cuando el comando falla
+- **código de salida** — con una ✗ roja cuando el comando falla
 - **batería** — por debajo del 30 %
 - **RAM** — por encima del 75 %
 - **hora**
+
+El hostname solo aparece por SSH y el sistema operativo no se muestra: en local serían
+ruido constante.
 
 El prompt cambia de color según el resultado: `❯` verde si el último comando fue
 correcto, rojo si falló.

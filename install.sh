@@ -1021,7 +1021,12 @@ config_starship() {
 starship_block() {
   cat <<'ZEOF'
 # >>> dev-setup >>>
-# Prompt de starship — Tokyo Night, colorido e informativo.
+# Prompt de starship — Tokyo Night, compacto e informativo.
+#
+# Los iconos van como escapes \uXXXX de TOML: así no dependen de cómo se
+# codifique el archivo y siempre apuntan al glifo correcto de la Nerd Font.
+#   \uEA83 carpeta   \uE725 rama   \uE729 commit   \uEC75 reloj
+#   \uEE9E batería  \uEFC5 memoria
 add_newline = true
 command_timeout = 2000
 format = """
@@ -1059,20 +1064,21 @@ $memory_usage\
 $time\
 $character"""
 
+# El sistema operativo se omite: en Linux siempre dice "Linux".
 [os]
-style = "bold #7aa2f7"
-format = "[ $os ]"
+disabled = true
 
+# El hostname solo aparece por SSH, donde aporta; en local es ruido.
 [username]
 show_always = false
 style_user = "bold #9ece6a"
 style_root = "bold #f7768e"
-format = " [$user]($style)"
+format = "[$user]($style) [│](bold #3b4261) "
 
 [hostname]
-ssh_only = false
+ssh_only = true
 style = "bold #2ac3de"
-format = "[$hostname]($style) "
+format = "[$hostname]($style) [│](bold #3b4261) "
 ssh_symbol = "🌐 "
 
 [directory]
@@ -1080,140 +1086,139 @@ style = "bold #7dcfff"
 truncation_length = 3
 truncate_to_repo = true
 truncation_symbol = "…/"
-format = "[$path]($style) "
+format = "[$path]($style) [│](bold #3b4261) "
 
 [git_branch]
-symbol = " "
+symbol = "\uE725"
 style = "bold #9ece6a"
-format = "on [$symbol$branch]($style) "
+format = "[$symbol $branch]($style) [│](bold #3b4261) "
 
 [git_commit]
 style = "bold #565f89"
-format = "([$hash]($style))"
+format = "[\uE729 $hash]($style) [│](bold #3b4261) "
 only_detached = false
-tag_symbol = "  "
 
 [git_status]
 style = "#e0af68"
-format = "([$all_status$ahead_behind]($style) )"
+format = "[$all_status$ahead_behind]($style) [│](bold #3b4261) "
 stashed = "≡"
 untracked = "??"
 
 [python]
-symbol = " "
+symbol = "\uE73C"
 style = "bold #e0af68"
-format = "via [$symbol py $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [nodejs]
-symbol = " "
+symbol = "\uE718"
 style = "bold #9ece6a"
-format = "via [$symbol node.js $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [bun]
-symbol = " "
+symbol = "\uE76F"
 style = "bold #e0af68"
-format = "via [$symbol bun $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [golang]
-symbol = " "
+symbol = "\uE724"
 style = "bold #2ac3de"
-format = "via [$symbol go $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [rust]
-symbol = " "
+symbol = "\uE7A8"
 style = "bold #ff9e64"
-format = "via [$symbol rs $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [java]
-symbol = " "
+symbol = "\uE738"
 style = "bold #f7768e"
-format = "via [$symbol java $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [kotlin]
-symbol = " "
+symbol = "\uE81B"
 style = "bold #bb9af7"
-format = "via [$symbol kt $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [ruby]
-symbol = " "
+symbol = "\uE739"
 style = "bold #f7768e"
-format = "via [$symbol rb $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [php]
-symbol = " "
+symbol = "\uE73D"
 style = "bold #bb9af7"
-format = "via [$symbol php $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [dotnet]
-symbol = " "
+symbol = "\uE77F"
 style = "bold #2ac3de"
-format = "via [$symbol dotnet $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [swift]
-symbol = " "
+symbol = "\uE755"
 style = "bold #ff9e64"
-format = "via [$symbol swift $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [elixir]
-symbol = " "
+symbol = "\uE7CD"
 style = "bold #bb9af7"
-format = "via [$symbol ex $version]($style) "
+format = "[$symbol $version]($style) [│](bold #3b4261) "
 
 [docker_context]
-symbol = " "
+symbol = "\uE650"
 style = "bold #2ac3de"
-format = "via [$symbol ctx.$context]($style) "
+format = "[$symbol $context]($style) [│](bold #3b4261) "
 
 [container]
-symbol = " "
+symbol = "\uE650"
 style = "bold #2ac3de"
 
 [aws]
-symbol = " "
+symbol = "\uE7AD"
 style = "bold #ff9e64"
-format = "via [$symbol aws.$profile]($style) "
+format = "[$symbol $profile]($style) [│](bold #3b4261) "
 
 [gcloud]
-symbol = " "
+symbol = "\uE7F1"
 style = "bold #ff9e64"
-format = "via [$symbol gcloud.$project]($style) "
+format = "[$symbol $project]($style) [│](bold #3b4261) "
 
 [direnv]
 disabled = false
 style = "bold #9ece6a"
-format = "[$direnv]($style) "
+format = "[$direnv]($style) [│](bold #3b4261) "
 
 [custom.ai]
 command = "echo ${OPENCODE:+opencode}"
 when = "test -n \"$OPENCODE\""
 ignore_timeout = true
 style = "bold #2ac3de"
-format = "[$output]($style) "
+format = "[$output]($style) [│](bold #3b4261) "
 
 [cmd_duration]
 min_time = 2000
 style = "bold #565f89"
-format = "[took $duration]($style) "
+format = "[took $duration]($style) [│](bold #3b4261) "
 
 [status]
 disabled = false
 style = "bold #f7768e"
-format = "[$status]($style)"
+format = "[✗ $status]($style) [│](bold #3b4261) "
 
 [jobs]
-symbol = " "
+symbol = "\uE7AD"
 style = "bold #e0af68"
-format = "[$symbol$number_of_jobs]($style) "
+format = "[$symbol $number_of_jobs]($style) [│](bold #3b4261) "
 
 [shlvl]
 style = "bold #565f89"
-format = "[$shlvl]($style) "
+format = "[$shlvl]($style) [│](bold #3b4261) "
 
 [battery]
-full_symbol = " "
-charging_symbol = " "
-discharging_symbol = " "
-format = "[$symbol$percentage]($style) "
+full_symbol = "\uEE9E"
+charging_symbol = "\uEE9E"
+discharging_symbol = "\uEE9E"
+format = "[$symbol $percentage]($style) [│](bold #3b4261) "
 
 [[battery.display]]
 threshold = 30
@@ -1223,13 +1228,14 @@ style = "bold yellow"
 disabled = false
 threshold = 75
 style = "bold #9ece6a"
-format = "[$symbol$memory_usage]($style) "
+symbol = "\uEFC5"
+format = "[$symbol $memory_usage]($style) [│](bold #3b4261) "
 
 [time]
 disabled = false
 time_format = "%H:%M"
 style = "bold #565f89"
-format = "([$time]($style) )"
+format = "[\uEC75 $time]($style) "
 
 [character]
 success_symbol = "[❯](bold #9ece6a)"

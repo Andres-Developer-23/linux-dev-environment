@@ -31,6 +31,32 @@ echo 'font_family MesloLGS Nerd Font' >> ~/.config/kitty/kitty.conf
 echo 'font.family = "MesloLGS Nerd Font"' >> ~/.config/alacritty/alacritty.toml
 ```
 
+### Los iconos salen como huecos en blanco
+
+**Causa:** el glifo está en el área de uso privado (U+E000–U+F8FF) y se perdió al
+escribir o copiar el archivo. Se convierte silenciosamente en un espacio normal: el
+prompt sigue funcionando, pero sin iconos.
+
+**Solución:** escríbelos como escapes Unicode de TOML, no como el carácter literal:
+
+```toml
+[python]
+symbol = "\uE73C"     # en vez del glifo pegado directamente
+```
+
+El archivo guarda seis caracteres ASCII y TOML lo convierte al glifo correcto al
+leerlo. Explicación completa en
+[prompt-starship.md](prompt-starship.md#3-los-iconos-van-como-escapes-uxxxx).
+
+### El módulo de Python aparece siempre en mi carpeta personal
+
+**Causa:** starship activa el módulo si encuentra un `.py` suelto en el directorio
+actual. Si tienes un script suelto en `~`, el módulo aparece siempre en casa.
+
+**Solución:** mueve el script a un subdirectorio, o pon `detect_extensions = []` en
+`[python]` para que solo se active con `requirements.txt`, `pyproject.toml` o
+`setup.py`.
+
 ### El prompt no sale en absoluto
 
 ```bash

@@ -207,9 +207,9 @@ opencode run --model omniroute/combo/free "hola"
 no la credencial. Pollinations, LLM7 y Kilo Gateway lo pasan y luego devuelven 401. El
 script manda un chat con `max_tokens: 64` y solo acepta respuestas con `choices`.
 
-El combo queda ordenado por la tabla de arriba (Cloudflare → Gemini → Groq → …). Para que el
-fallback sirva de algo, el orden debe mezclar **empresas distintas**: dos modelos del mismo
-proveedor caen juntos cuando se agota su cuota.
+El combo queda ordenado por rapidez (Gemini → Groq → Cerebras → …) y deja Cloudflare al
+final, que es el más lento. Para que el fallback sirva de algo, el orden debe mezclar
+**empresas distintas**: dos modelos del mismo proveedor caen juntos cuando se agota su cuota.
 
 Verificado en esta máquina: con el proveedor de Gemini desactivado
 (`omniroute providers edit gemini --inactive`), `combo/free` siguió respondiendo por

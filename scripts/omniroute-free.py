@@ -45,12 +45,6 @@ PROVIDERS = [
         "note": "15 RPM · sin tarjeta · la más generosa",
     },
     {
-        "id": "cloudflare-playground", "env": "", "keyless": True,
-        "label": "Cloudflare Playground", "url": "https://playground.ai.cloudflare.com",
-        "prefer": ["glm-5.2", "deepseek-v4-flash", "kimi-k2.7-code", "glm", "qwen"],
-        "max": 3, "note": "sin clave · necesita Chromium · 10-30 s por petición",
-    },
-    {
         "id": "groq", "env": "GROQ_API_KEY", "label": "Groq",
         "url": "https://console.groq.com/keys",
         "prefer": ["gpt-oss-120b", "qwen", "llama-3.3", "llama"],
@@ -102,6 +96,13 @@ PROVIDERS = [
         "url": "https://huggingface.co/settings/tokens",
         "prefer": ["Qwen2.5-7B", "Llama-3.2-8B", "Mistral-7B", "Qwen", "Llama"],
         "note": "créditos gratis · arranques en frío de 10-30 s",
+    },
+    {
+        # Sin clave, pero levanta un Chromium por petición: último recurso.
+        "id": "cloudflare-playground", "env": "", "keyless": True,
+        "label": "Cloudflare Playground", "url": "https://playground.ai.cloudflare.com",
+        "prefer": ["glm-5.2", "deepseek-v4-flash", "kimi-k2.7-code", "glm", "qwen"],
+        "max": 3, "note": "sin clave · necesita Chromium · 10-30 s por petición",
     },
 ]
 
@@ -205,13 +206,13 @@ def connected_providers() -> set[str]:
     return {c.get("provider", "") for c in data.get("providers", [])}
 
 
-def models_of(provider: str, cache: dict) -> list[str]:
-    if "data" not in cache:
-        try:
-            cache["data"] = api("/v1/models")["data"]
-        except (urllib.error.URLError, OSError, KeyError):
-            cache["data"] = []
-    return [m["id"] for m in cache["data"] if m.get("owned_by") == provider]
+def models_of(provider: str) -> list[str]:
+    # Sin caché: el catálogo cambia al añadir un proveedor, y reutilizarlo deja
+    # fuera precisamente al que se acaba de registrar.
+    try:
+        return [m["id"] for m in api("/v1/models")["data"] if m.get("owned_by") == provider]
+    except (urllib.error.URLError, OSError, KeyError):
+        return []
 
 
 def pick_models(ids: list[str], preferences: list[str], limit: int) -> list[str]:
@@ -275,7 +276,6 @@ def cmd_list(values: dict[str, str]) -> int:
 
 def cmd_add(values: dict[str, str], combo: str, refresh_opencode: bool) -> int:
     connected = connected_providers()
-    cache: dict = {}
     winners: list[str] = []
     rows: list[tuple[str, str]] = []
     missing_browser = False
@@ -310,7 +310,7 @@ def cmd_add(values: dict[str, str], combo: str, refresh_opencode: bool) -> int:
             rows.append((label, "test fallido"))
             continue
 
-        candidates = pick_models(models_of(pid, cache), p["prefer"], limit)
+        candidates = pick_models(models_of(pid), p["prefer"], limit)
         if not candidates:
             rows.append((label, "sin modelos"))
             continue

@@ -18,6 +18,7 @@ cada archivo tocado · log de cada ejecución.
 - [Inicio rápido](#inicio-rápido)
 - [Las capas](#las-capas)
 - [La terminal](#la-terminal)
+- [IA: OmniRoute + OpenCode](#ia-omniroute--opencode)
 - [Verificación](#verificación)
 - [Cómo está construido](#cómo-está-construido)
 - [Documentación](#documentación)
@@ -117,6 +118,7 @@ segundo plano mientras dura la ejecución.
 | `--vscode` | Visual Studio Code desde el repo oficial de Microsoft | Sí |
 | `--db` | MySQL Server, Redis, MongoDB 8 y DB Browser for SQLite | Sí |
 | `--nvim` | LazyVim sobre Neovim (solo si `~/.config/nvim` no existe) | No |
+| `--omniroute` | OmniRoute: gateway local de LLMs en `:20128`, servicio de usuario y proveedor `omniroute` en OpenCode | No |
 | `--all` | Todas las anteriores (no cambia tu shell) | Sí |
 | `--chsh` | Cambia tu shell de login a zsh | Sí |
 
@@ -222,6 +224,51 @@ normal, y si no, delega en zoxide. Así nunca pierdes el comportamiento estánda
 
 ---
 
+## IA: OmniRoute + OpenCode
+
+[OmniRoute](docs/omniroute.md) es un gateway local (MIT) que expone **una sola API
+compatible con OpenAI** en `127.0.0.1:20128` y enruta cada petición hacia los proveedores
+que conectes, con fallback automático cuando uno falla o agota su cuota.
+
+```bash
+./install.sh --omniroute                    # ~3 GB, servicio systemd --user
+xdg-open http://127.0.0.1:20128/dashboard    # conecta proveedores y crea la clave
+just omniroute-default                      # importa el catálogo y usa omniroute/auto
+opencode run --model omniroute/auto "…"
+```
+
+OpenCode V2 lo ve como un proveedor más (`providers.omniroute`) con las rutas de
+enrutamiento `auto`, `auto/cheap`, `auto/coding`, `auto/fast`, `auto/vision` y
+`auto/best-coding`, más tus combos (`combo/<nombre>`).
+
+```bash
+# Un combo es la forma fiable de tener fallback: orden explícito, sin sorpresas
+omniroute combo create dev --strategy priority \
+  --models "gemini/gemini-3-flash-preview,gemini/gemini-3.8-flash"
+just omniroute-default combo/dev
+
+opencode run --model omniroute/combo/dev "resume este diff"
+```
+
+El gateway se instala **cerrado a loopback y con clave obligatoria**. Por defecto OmniRoute
+escucha en `0.0.0.0` y sin autenticación: la unidad de systemd lo corrige con
+`OMNIROUTE_SERVER_HOST=127.0.0.1` y `REQUIRE_API_KEY=true`.
+
+| Receta | Para qué |
+|---|---|
+| `just omniroute` | Instala la capa |
+| `just omniroute-models` | Lista los modelos que el gateway puede atender |
+| `just omniroute-combo nombre modelos` | Crea un combo de enrutamiento |
+| `just omniroute-default [modelo]` | Fija el modelo por defecto (por defecto `auto`) |
+| `just omniroute-status` | Estado del servicio |
+| `just omniroute-logs` | Registro en vivo |
+| `just omniroute-ui` | Abre el panel en el navegador |
+
+OmniRoute **organiza** el acceso, no regala cuotas: cada proveedor impone sus límites y sus
+términos. El paso de conectar proveedores es interactivo y se hace una vez en el panel.
+
+---
+
 ## Verificación
 
 ```bash
@@ -267,6 +314,7 @@ Detalle completo en [docs/architecture.md](docs/architecture.md).
 | [architecture.md](docs/architecture.md) | Capas, idempotencia, bloques gestionados, backups, cómo añadir una capa |
 | [shell-zsh.md](docs/shell-zsh.md) | `.zshenv` / `.zprofile` / `.zshrc`, historial, completado, plugins, fzf, alias |
 | [prompt-starship.md](docs/prompt-starship.md) | Cada módulo del prompt, cómo cambiar colores, iconos y qué mostrar |
+| [omniroute.md](docs/omniroute.md) | Gateway local de LLMs: instalación, clave, proveedores, fallback e integración con OpenCode V2 |
 | [troubleshooting.md](docs/troubleshooting.md) | Cuadritos en el prompt, `starship: command not found`, sudo, shell por defecto… |
 | [android-flutter.md](docs/android-flutter.md) | SDK de Android, Flutter y Gradle |
 

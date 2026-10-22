@@ -138,6 +138,34 @@ fi
 [[ -f "$HOME/.dircolors" ]] && ok "~/.dircolors presente" || warn "sin ~/.dircolors"
 [[ -f "$HOME/.config/starship.toml" ]] && ok "~/.config/starship.toml presente" || warn "sin starship.toml"
 
+section "OmniRoute (opcional)"
+if command -v omniroute >/dev/null 2>&1; then
+  ok "omniroute: $(omniroute --version 2>/dev/null | head -1)"
+  if [[ -s "$HOME/.secrets/omniroute-key" ]]; then
+    ok "API key en ~/.secrets/omniroute-key"
+  else
+    warn "sin API key (créala en http://127.0.0.1:20128/dashboard)"
+  fi
+  if systemctl --user is-active --quiet omniroute 2>/dev/null; then
+    ok "servicio systemd --user omniroute activo"
+  else
+    warn "servicio omniroute parado (systemctl --user start omniroute)"
+  fi
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:20128/v1/models 2>/dev/null || true)"
+  if [[ "$code" == "200" || "$code" == "401" ]]; then
+    ok "gateway responde en :20128 (HTTP $code)"
+  else
+    warn "gateway no responde en :20128"
+  fi
+  if out="$("$(dirname "$0")/scripts/opencode-providers.py" --check 2>&1)"; then
+    ok "OpenCode: $out"
+  else
+    bad "OpenCode: $out"
+  fi
+else
+  warn "omniroute no instalado (capa opcional: ./install.sh --omniroute)"
+fi
+
 section "Entorno"
 if id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
   ok "usuario en grupo docker"

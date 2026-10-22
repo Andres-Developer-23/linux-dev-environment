@@ -31,6 +31,7 @@ export PATH="$LOCAL_BIN:$HOME/.bun/bin:$HOME/.opencode/bin:$PATH"
 # Flags
 # ---------------------------------------------------------------------------
 L_APT=0 L_USER=0 L_CONFIG=0 L_JAVA=0 L_DOCKER=0 L_VSCODE=0 L_DB=0 L_NVIM=0
+L_OMNI=0
 DRY=0 CHSH=0
 SUDO_KEEP_PID=""
 
@@ -50,6 +51,8 @@ Capas:
   --vscode     Visual Studio Code (repo oficial de Microsoft)
   --db         MySQL Server, Redis, MongoDB 8 y DB Browser for SQLite
   --nvim       LazyVim sobre Neovim (solo si ~/.config/nvim no existe)
+  --omniroute  Gateway local de LLMs (OmniRoute) en :20128 como servicio de
+               usuario, y el proveedor `omniroute` en OpenCode (~3 GB)
   --all        Todas las capas anteriores (no cambia tu shell)
   --chsh       Cambia tu shell de login a zsh (requiere cerrar sesión)
 
@@ -75,7 +78,8 @@ while (($#)); do
     --vscode) L_VSCODE=1 ;;
     --db) L_DB=1 ;;
     --nvim) L_NVIM=1 ;;
-    --all) L_APT=1 L_USER=1 L_CONFIG=1 L_JAVA=1 L_DOCKER=1 L_VSCODE=1 L_DB=1 L_NVIM=1 ;;
+    --omniroute) L_OMNI=1 ;;
+    --all) L_APT=1 L_USER=1 L_CONFIG=1 L_JAVA=1 L_DOCKER=1 L_VSCODE=1 L_DB=1 L_NVIM=1 L_OMNI=1 ;;
     --chsh) CHSH=1 ;;
     --dry-run) DRY=1 ;;
     -h|--help) usage; exit 0 ;;
@@ -1289,12 +1293,188 @@ layer_nvim() {
 }
 
 # ---------------------------------------------------------------------------
+# Capa OmniRoute: gateway local de LLMs
+#
+# OmniRoute expone una API compatible con OpenAI en 127.0.0.1:20128 y enruta
+# hacia los proveedores que conectes en su panel, con fallback automático.
+# Se instala en un prefijo propio (~/.local/share/omniroute) y no en el prefijo
+# global de npm, que aquí vive dentro de fnm y desaparece al cambiar de Node.
+# ---------------------------------------------------------------------------
+OMNIROUTE_HOME="$HOME/.local/share/omniroute"
+OMNIROUTE_KEY_FILE="$HOME/.secrets/omniroute-key"
+OMNIROUTE_URL="http://127.0.0.1:20128"
+OMNIROUTE_UNIT="$HOME/.config/systemd/user/omniroute.service"
+OMNIROUTE_NPM_ALLOW="omniroute,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild"
+
+omniroute_bin() { printf '%s/bin/omniroute' "$OMNIROUTE_HOME"; }
+
+omniroute_running() {
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$OMNIROUTE_URL/v1/models" 2>/dev/null || true)"
+  # 200 con clave, 401 sin ella: en ambos casos el gateway responde.
+  [[ "$code" == 200 || "$code" == 401 ]]
+}
+
+omniroute_wait_ready() {
+  local i
+  for i in {1..40}; do
+    omniroute_running && return 0
+    sleep 1
+  done
+  return 1
+}
+
+install_omniroute_service() {
+  local unit_dir="$HOME/.config/systemd/user"
+  mkdir -p "$unit_dir" "$HOME/.local/state/omniroute"
+  cat > "$OMNIROUTE_UNIT" <<'EOF'
+[Unit]
+Description=OmniRoute — gateway local de LLMs (API OpenAI-compatible en :20128)
+Documentation=https://github.com/diegosouzapw/OmniRoute
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/omniroute/bin/omniroute
+WorkingDirectory=%h
+Environment=NODE_ENV=production
+Environment=OMNIROUTE_MEMORY_MB=2048
+# Por defecto escucha en 0.0.0.0 SIN exigir clave. Se cierra a loopback y se
+# obliga la clave: el plano /v1/* se factura contra tus proveedores.
+Environment=OMNIROUTE_SERVER_HOST=127.0.0.1
+Environment=REQUIRE_API_KEY=true
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+StandardOutput=append:%h/.local/state/omniroute/gateway.log
+StandardError=append:%h/.local/state/omniroute/gateway.log
+
+[Install]
+WantedBy=default.target
+EOF
+  if ! systemctl --user daemon-reload 2>/dev/null; then
+    warn "systemd de usuario no disponible; arranca el gateway a mano: omniroute"
+    return 0
+  fi
+  run systemctl --user enable --now omniroute.service
+  ok "servicio systemd --user omniroute activo"
+}
+
+omniroute_admin_password() {
+  local f="$HOME/.secrets/omniroute-admin-password"
+  if [[ ! -s "$f" ]]; then
+    mkdir -p "$(dirname "$f")"
+    chmod 700 "$(dirname "$f")"
+    if have openssl; then
+      openssl rand -base64 24 | tr -d '/+=' | head -c 24 > "$f"
+    else
+      head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 24 > "$f"
+    fi
+    chmod 600 "$f"
+  fi
+  cat "$f"
+}
+
+omniroute_api_key() {
+  # Crea una clave de endpoint con la sesión de administrador y la imprime.
+  # El endpoint /api/keys no acepta otro método de autenticación.
+  local pw jar resp key
+  pw="$(omniroute_admin_password)"
+  jar="$(mktemp)"
+  resp="$(curl -s -c "$jar" -X POST "$OMNIROUTE_URL/api/auth/login" \
+    -H 'Content-Type: application/json' \
+    -d "$(jq -nc --arg p "$pw" '{password:$p}')" 2>/dev/null || true)"
+  if [[ "$resp" != *'"success":true'* ]]; then
+    rm -f "$jar"
+    return 1
+  fi
+  key="$(curl -s -b "$jar" -X POST "$OMNIROUTE_URL/api/keys" \
+    -H 'Content-Type: application/json' -d '{"name":"dev-setup"}' 2>/dev/null \
+    | jq -r '.key // empty' 2>/dev/null || true)"
+  rm -f "$jar"
+  [[ -n "$key" ]] || return 1
+  printf '%s' "$key"
+}
+
+ensure_omniroute_key() {
+  [[ -s "$OMNIROUTE_KEY_FILE" ]] && return 0
+  mkdir -p "$(dirname "$OMNIROUTE_KEY_FILE")"
+  chmod 700 "$(dirname "$OMNIROUTE_KEY_FILE")"
+
+  # `setup` debe correr cuando el servidor ya creó ~/.omniroute; si se ejecuta
+  # antes, escribe la contraseña en ~/.config/omniroute y no la ve el servidor.
+  local pw
+  pw="$(omniroute_admin_password)"
+  run "$(omniroute_bin)" setup --password "$pw" --non-interactive >/dev/null 2>&1 || true
+
+  local key=""
+  key="$(omniroute_api_key 2>/dev/null || true)"
+  if [[ -z "$key" ]]; then
+    warn "no pude crear la clave del endpoint automáticamente"
+    warn "hazlo en $OMNIROUTE_URL/dashboard → Endpoints y guárdala en $OMNIROUTE_KEY_FILE"
+    return 1
+  fi
+  printf '%s\n' "$key" > "$OMNIROUTE_KEY_FILE"
+  chmod 600 "$OMNIROUTE_KEY_FILE"
+  ok "API key del gateway en $OMNIROUTE_KEY_FILE"
+  ok "contraseña del panel en ~/.secrets/omniroute-admin-password"
+}
+
+layer_omniroute() {
+  step "Capa OmniRoute: gateway local de LLMs en :20128"
+
+  if ((DRY)); then
+    printf '  %s[dry-run]%s npm install -g --prefix %s omniroute\n' "$C_DIM" "$C_OFF" "$OMNIROUTE_HOME"
+    printf '  %s[dry-run]%s escribir %s y %s\n' "$C_DIM" "$C_OFF" "$OMNIROUTE_UNIT" "$HOME/.config/opencode/opencode.jsonc"
+    printf '  %s[dry-run]%s systemctl --user enable --now omniroute.service\n' "$C_DIM" "$C_OFF"
+    return 0
+  fi
+
+  have node || die "OmniRoute necesita Node.js; instala la capa --apt antes."
+  local major
+  major="$(node -v | sed 's/^v\([0-9]*\).*/\1/')"
+  ((major >= 18)) || die "Node $(node -v) es antiguo: OmniRoute pide 18 o más."
+
+  if [[ -x "$(omniroute_bin)" ]]; then
+    ok "omniroute ya instalado: $("$(omniroute_bin)" --version 2>/dev/null | head -1)"
+  else
+    mkdir -p "$OMNIROUTE_HOME"
+    # npm 11 bloquea los scripts de ciclo de vida salvo que se autoricen.
+    run npm install -g --prefix "$OMNIROUTE_HOME" \
+      --allow-scripts="$OMNIROUTE_NPM_ALLOW" --no-audit --no-fund omniroute
+    ok "omniroute instalado en $OMNIROUTE_HOME"
+  fi
+
+  run ln -sfn "$(omniroute_bin)" "$LOCAL_BIN/omniroute"
+  if [[ -e "$OMNIROUTE_HOME/bin/omniroute-reset-password" ]]; then
+    run ln -sfn "$OMNIROUTE_HOME/bin/omniroute-reset-password" "$LOCAL_BIN/omniroute-reset-password"
+  fi
+
+  install_omniroute_service
+  if omniroute_wait_ready; then
+    ok "gateway respondiendo en $OMNIROUTE_URL"
+  else
+    warn "el gateway aún no responde; mira: journalctl --user -u omniroute -n 40"
+  fi
+
+  ensure_omniroute_key || true
+
+  run "$SETUP_DIR/scripts/opencode-providers.py" \
+    --key-file "$OMNIROUTE_KEY_FILE" --config "$HOME/.config/opencode/opencode.jsonc" \
+    || warn "no pude escribir el proveedor en OpenCode; ejecuta scripts/opencode-providers.py a mano"
+
+  warn "Conecta proveedores gratis en $OMNIROUTE_URL/dashboard → Providers (paso interactivo)"
+  warn "Después: just omniroute-default   (fija omniroute/auto como modelo por defecto)"
+}
+
+# ---------------------------------------------------------------------------
 # Estado final
 # ---------------------------------------------------------------------------
 status() {
   step "Estado"
   local c
-  for c in node pnpm bun uv ruff gh starship zoxide yq lazygit just delta nvim tmux zsh docker code java mvn mysql mongod redis-cli sqlite3 eza bat fd rg fzf; do
+  for c in node pnpm bun uv ruff gh starship zoxide yq lazygit just delta nvim tmux zsh docker code java mvn mysql mongod redis-cli sqlite3 eza bat fd rg fzf omniroute; do
     printf '  %-10s ' "$c"
     if have "$c"; then
       printf '%s%s%s\n' "$C_OK" "$(command -v "$c")" "$C_OFF"
@@ -1312,7 +1492,7 @@ if [[ $EUID -eq 0 ]]; then
 fi
 
 STEP=0
-for flag in "$L_APT" "$L_USER" "$L_CONFIG" "$L_JAVA" "$L_DOCKER" "$L_VSCODE" "$L_DB" "$L_NVIM"; do
+for flag in "$L_APT" "$L_USER" "$L_CONFIG" "$L_JAVA" "$L_DOCKER" "$L_VSCODE" "$L_DB" "$L_NVIM" "$L_OMNI"; do
   if ((flag)); then STEP=1; fi
 done
 if ((STEP == 0)); then die "No elegiste ninguna capa. Usa --help."; fi
@@ -1329,6 +1509,7 @@ if ((L_VSCODE)); then layer_vscode; fi
 if ((L_DB)); then layer_db; fi
 if ((L_CONFIG)); then layer_config; fi
 if ((L_NVIM)); then layer_nvim; fi
+if ((L_OMNI)); then layer_omniroute; fi
 
 if ((CHSH)); then
   if have zsh; then

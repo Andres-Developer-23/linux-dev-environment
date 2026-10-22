@@ -587,6 +587,51 @@ Con `fnm env --use-on-cd` (ya activo en el `.zshrc`), entrar en un directorio co
 
 ---
 
+## IA — OmniRoute y opencode
+
+OmniRoute es un gateway local: **una** API compatible con OpenAI en `:20128` que enruta
+hacia varios proveedores y hace fallback cuando uno falla o agota su cuota. OpenCode lo
+consume como el proveedor `omniroute`.
+
+```bash
+# Estado y control del gateway
+systemctl --user status omniroute
+systemctl --user restart omniroute
+journalctl --user -u omniroute -f
+omniroute doctor
+
+# Panel
+xdg-open http://127.0.0.1:20128/dashboard
+
+# Qué modelos puede atender ahora mismo
+curl -s -H "Authorization: Bearer $(cat ~/.secrets/omniroute-key)" \
+  http://127.0.0.1:20128/v1/models | jq -r '.data[].id' | sort
+
+# Una petición suelta, sin opencode
+curl -s http://127.0.0.1:20128/v1/chat/completions \
+  -H "Authorization: Bearer $(cat ~/.secrets/omniroute-key)" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"hola"}]}' \
+  | jq -r '.choices[0].message.content'
+
+# OpenCode contra el gateway
+opencode run --model omniroute/auto "resume este diff"
+```
+
+| Modelo | Criterio de elección |
+|---|---|
+| `omniroute/auto` | equilibrado |
+| `omniroute/auto/cheap` | menor coste |
+| `omniroute/auto/coding` | código |
+| `omniroute/auto/fast` | menor latencia |
+| `omniroute/auto/vision` | con visión |
+| `omniroute/combo/<nombre>` | orden explícito, el más fiable |
+
+Los combos no salen en `/v1/models`; se crean con `omniroute combo create` y el script de
+integración los detecta al volver a ejecutarse.
+
+---
+
 ## dev-setup en sí
 
 ```bash

@@ -238,6 +238,24 @@ fi
 Clona LazyVim solo si `~/.config/nvim` no existe, y borra el `.git` del resultado para
 que no quede un repo anidado.
 
+### 4.6 `layer_omniroute`
+
+Instala OmniRoute (gateway local de LLMs) y lo conecta a OpenCode. Tres decisiones que no
+son obvias:
+
+- **Prefijo propio de npm** (`~/.local/share/omniroute`) en vez del global. El global vive
+  dentro de fnm (`node-versions/v24.22.0/installation`), así que desaparecería al cambiar
+  de versión de Node.
+- **`--allow-scripts`** con la lista publicada por OmniRoute. npm 11 bloquea los scripts de
+  ciclo de vida por defecto, y sin ellos el paquete queda sin sus binarios nativos.
+- **El proveedor de OpenCode lo escribe `scripts/opencode-providers.py`**, no
+  `omniroute setup-opencode`. Ese comando genera el formato de la V1 (`provider`, `npm`,
+  `options`); la V2 usa `providers`, `package` y `settings`. El script lee JSONC, conserva
+  lo que ya hubiera y guarda backup antes de escribir.
+
+La API key no viaja en la configuración: se guarda en `~/.secrets/omniroute-key` (600) y
+OpenCode la lee con la sustitución `{file:…}`.
+
 ---
 
 ## 5. Logging y backups

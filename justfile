@@ -35,6 +35,34 @@ verify:
 dry-run:
     ./install.sh --dry-run --all
 
+# Instala OmniRoute (gateway local de LLMs) y lo integra en OpenCode
+omniroute:
+    ./install.sh --omniroute
+
+# Fija el modelo por defecto (por defecto: auto) y refresca el bloque
+omniroute-default model="auto":
+    ./scripts/opencode-providers.py --set-default "{{model}}"
+
+# Crea un combo de enrutamiento (nombre y lista de modelos)
+omniroute-combo name models:
+    omniroute combo create {{name}} --strategy priority --models "{{models}}"
+
+# Estado y registro del gateway
+omniroute-status:
+    @systemctl --user status omniroute --no-pager || true
+
+omniroute-logs:
+    @journalctl --user -u omniroute -f
+
+# Modelos disponibles a través del gateway
+omniroute-models:
+    @curl -s -H "Authorization: Bearer $(cat ~/.secrets/omniroute-key)" \
+        http://127.0.0.1:20128/v1/models | jq -r '.data[].id' | sort
+
+# Abrir el panel de OmniRoute
+omniroute-ui:
+    @xdg-open http://127.0.0.1:20128/dashboard
+
 # Editar la configuración de zsh
 edit:
     nvim ~/.zshrc

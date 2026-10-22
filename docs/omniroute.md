@@ -165,6 +165,62 @@ Verifica el catálogo resultante:
 just omniroute-models          # lista de modelos que el gateway puede atender
 ```
 
+### Proveedores gratuitos: qué sigue funcionando en 2026
+
+Comprobado en octubre de 2026. Casi todos los gateways que se anuncian como «sin clave»
+(Pollinations, LLM7, DuckDuckGo, Kilo Gateway) devuelven 401: piden registro igualmente o
+tienen el catálogo caducado. La excepción es **Cloudflare AI Playground**, que no pide
+cuenta pero funciona con un navegador headless.
+
+| Proveedor | Límite gratis | Registro | Modelos |
+|---|---|---|---|
+| **Cloudflare Playground** | sin cuota publicada · 10-30 s por petición | **No** (solo Chromium) | GLM-5.2, DeepSeek V4, Kimi K2.7 |
+| **Google AI Studio** | 5-15 RPM · 20-1.500 peticiones/día | Sí, sin tarjeta | Gemini Flash |
+| **Groq** | 30 RPM · 1.000-14.400/día · ~800 tok/s | Sí, sin tarjeta | gpt-oss, Qwen, Llama |
+| **Cerebras** | 30 RPM · 14.400/día · 1M tokens/día | Sí, sin tarjeta | gpt-oss-120b |
+| **Z.AI (GLM)** | modelos *flash* gratis | Sí, sin tarjeta | GLM-4.5/4.7 Flash |
+| **OpenRouter** | 50/día (1.000 con 10 $ comprados) | Sí, sin tarjeta | 19 modelos `:free` |
+| **SambaNova** | tier gratuito | Sí, sin tarjeta | DeepSeek, Llama 70B |
+| **Nous Research** | 50 RPM · 500k TPM | Sí, sin tarjeta | Hermes |
+| **Mistral** | ~1.000 M tokens/mes | Sí, pide teléfono | Mistral, Codestral |
+| **Cohere** | 1.000 llamadas/mes | Sí, sin tarjeta | Command R (no comercial) |
+| **Hugging Face** | créditos | Sí, sin tarjeta | serverless, arranques lentos |
+
+Cerebras, Mistral y NVIDIA NIM han ido y venido entre «tier gratis» y «créditos de prueba»;
+los límites cambian cada pocos meses. Verifícalo antes de confiar en uno.
+
+### Añadirlos: un archivo y un comando
+
+`just omniroute-free` lee las claves de `~/.secrets/omniroute-free.env` (600), registra cada
+proveedor, le hace una petición de chat real y crea el combo `free` **solo con los que
+responden**. Los que fallan se listan y no entran.
+
+```bash
+just omniroute-browser      # solo la primera vez: Chromium para Cloudflare (~400 MB)
+just omniroute-free-list    # tabla con la URL de cada clave
+nano ~/.secrets/omniroute-free.env
+just omniroute-free
+opencode run --model omniroute/combo/free "hola"
+```
+
+**Por qué una petición real y no solo `providers test`:** ese test valida la configuración,
+no la credencial. Pollinations, LLM7 y Kilo Gateway lo pasan y luego devuelven 401. El
+script manda un chat con `max_tokens: 64` y solo acepta respuestas con `choices`.
+
+El combo queda ordenado por la tabla de arriba (Cloudflare → Gemini → Groq → …). Para que el
+fallback sirva de algo, el orden debe mezclar **empresas distintas**: dos modelos del mismo
+proveedor caen juntos cuando se agota su cuota.
+
+Verificado en esta máquina: con el proveedor de Gemini desactivado
+(`omniroute providers edit gemini --inactive`), `combo/free` siguió respondiendo por
+Cloudflare. Eso es el fallback funcionando.
+
+Para quitar uno: `omniroute providers remove <id> --yes`.
+
+> **Coste oculto de Cloudflare Playground**: cada petición levanta un Chromium headless.
+> Tarda 10-30 s y consume RAM. Es un buen *último recurso* del combo, no el primero, salvo
+> que no tengas ninguna clave.
+
 ---
 
 ## 6. Fallback: `auto` y los combos

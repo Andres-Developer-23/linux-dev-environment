@@ -59,6 +59,18 @@ omniroute-models:
     @curl -s -H "Authorization: Bearer $(cat ~/.secrets/omniroute-key)" \
         http://127.0.0.1:20128/v1/models | jq -r '.data[].id' | sort
 
+# Añade proveedores gratuitos desde ~/.secrets/omniroute-free.env y crea el combo free
+omniroute-free:
+    ./scripts/omniroute-free.py
+
+# Qué proveedores gratuitos soporta y dónde sacar cada clave
+omniroute-free-list:
+    ./scripts/omniroute-free.py --list
+
+# Chromium para el proveedor sin clave de Cloudflare Playground (~400 MB)
+omniroute-browser:
+    node ~/.local/share/omniroute/lib/node_modules/omniroute/node_modules/playwright/cli.js install chromium
+
 # Abrir el panel de OmniRoute
 omniroute-ui:
     @xdg-open http://127.0.0.1:20128/dashboard

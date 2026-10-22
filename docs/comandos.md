@@ -630,6 +630,19 @@ opencode run --model omniroute/auto "resume este diff"
 Los combos no salen en `/v1/models`; se crean con `omniroute combo create` y el script de
 integración los detecta al volver a ejecutarse.
 
+Si no quieres registrarte en nada, **Cloudflare Playground** da modelos gratis sin cuenta
+(GLM-5.2, DeepSeek V4, Kimi K2.7) a cambio de 10-30 s por petición, porque cada llamada
+levanta un Chromium headless:
+
+```bash
+just omniroute-browser     # Chromium, ~400 MB, solo la primera vez
+just omniroute-free        # prueba cada proveedor y crea el combo free
+opencode run --model omniroute/combo/free "hola"
+```
+
+Para los demás proveedores gratuitos (Groq, Cerebras, Z.AI, OpenRouter…), rellena
+`~/.secrets/omniroute-free.env` y ejecuta `just omniroute-free`.
+
 ---
 
 ## dev-setup en sí

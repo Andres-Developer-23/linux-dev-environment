@@ -258,6 +258,9 @@ escucha en `0.0.0.0` y sin autenticación: la unidad de systemd lo corrige con
 |---|---|
 | `just omniroute` | Instala la capa |
 | `just omniroute-models` | Lista los modelos que el gateway puede atender |
+| `just omniroute-free` | Añade proveedores gratuitos desde `~/.secrets/omniroute-free.env` |
+| `just omniroute-free-list` | Qué proveedores gratis hay y dónde sacar cada clave |
+| `just omniroute-browser` | Chromium para el proveedor sin clave de Cloudflare (~400 MB) |
 | `just omniroute-combo nombre modelos` | Crea un combo de enrutamiento |
 | `just omniroute-default [modelo]` | Fija el modelo por defecto (por defecto `auto`) |
 | `just omniroute-status` | Estado del servicio |
@@ -266,6 +269,22 @@ escucha en `0.0.0.0` y sin autenticación: la unidad de systemd lo corrige con
 
 OmniRoute **organiza** el acceso, no regala cuotas: cada proveedor impone sus límites y sus
 términos. El paso de conectar proveedores es interactivo y se hace una vez en el panel.
+
+En 2026 casi ninguna API de chat gratuita funciona sin registro: los gateways «sin clave»
+devuelven 401. La excepción es **Cloudflare AI Playground** (no pide cuenta, solo un
+Chromium headless) y, además, hay planes gratuitos con registro: Google AI Studio, Groq,
+Cerebras, Z.AI, OpenRouter, SambaNova… El proyecto los añade por lotes:
+
+```bash
+just omniroute-browser      # Chromium para Cloudflare (~400 MB, solo la primera vez)
+just omniroute-free-list    # tabla de proveedores y URL de cada clave
+nano ~/.secrets/omniroute-free.env
+just omniroute-free         # registra, prueba con un chat real y arma el combo `free`
+```
+
+El combo `free` resultante mezcla proveedores de empresas distintas, que es lo que hace
+útil el fallback. Verificado desactivando Gemini: la petición siguió respondiendo por
+Cloudflare.
 
 ---
 
